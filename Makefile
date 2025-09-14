@@ -3,7 +3,9 @@ K=kernel
 # 只保留必要的对象文件
 OBJS = \
   $K/entry.o \
-  $K/start.o
+  $K/start.o \
+  $K/uart.o \
+  $K/main.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
