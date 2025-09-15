@@ -1,7 +1,12 @@
 #include "defs.h"
 
 void main() {
-    char* s = "boot successful.";
-    uart_puts(s);
-    while (1);
+    if (cpuid() == 0) {
+        uartinit();
+        printfinit();
+    } else {
+        __sync_synchronize();
+        printf("hart %d starting\n", cpuid());
+    }
+    while(1);
 }

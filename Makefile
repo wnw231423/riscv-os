@@ -5,7 +5,10 @@ OBJS = \
   $K/entry.o \
   $K/start.o \
   $K/uart.o \
-  $K/main.o
+  $K/main.o \
+  $K/spinlock.o \
+  $K/proc.o \
+  $K/printf.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
@@ -62,7 +65,8 @@ $K/kernel: $(OBJS) $K/kernel.ld
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
 # QEMU选项
-QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -nographic
+CPUNUM = 3
+QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUNUM) -nographic
 
 qemu: $K/kernel
 	$(QEMU) $(QEMUOPTS)
