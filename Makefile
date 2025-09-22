@@ -66,7 +66,7 @@ qemu: $K/kernel
 # 清理规则
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*/*.o */*.d */*.asm */*.sym */*/*.o */*/*.d */*/*.asm */*/*.sym\
+	*/*.o */*.d */*.asm */*.sym */*/*.o */*/*.d */*/*.asm */*/*.sym \
 	$K/kernel .gdbinit
 
 # 调试相关

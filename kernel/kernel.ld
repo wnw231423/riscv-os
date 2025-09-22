@@ -1,5 +1,5 @@
 OUTPUT_ARCH( "riscv" )
-ENTRY(_entry)
+ENTRY( _entry )
 
 SECTIONS
 {
@@ -10,6 +10,7 @@ SECTIONS
   . = 0x80000000;
 
   .text : {
+    kernel/boot/entry.o(_entry)
     *(.text .text.*)
     PROVIDE(etext = .);
   }
