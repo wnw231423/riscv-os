@@ -1,6 +1,6 @@
 #include "types.h"
 #include "param.h"
-#include "proc.h"
+#include "proc/proc.h"
 #include "riscv.h"
 
 struct cpu cpus[NCPU];

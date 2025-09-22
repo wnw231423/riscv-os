@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#include "spinlock.h"
+#include "lib/spinlock.h"
 #include "defs.h"
 
 volatile int panicked = 0;

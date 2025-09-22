@@ -1,14 +1,5 @@
 K=kernel
-
-# 只保留必要的对象文件
-OBJS = \
-  $K/entry.o \
-  $K/start.o \
-  $K/uart.o \
-  $K/main.o \
-  $K/spinlock.o \
-  $K/proc.o \
-  $K/printf.o
+INC=include
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
@@ -39,7 +30,7 @@ CFLAGS += -MD
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding
 CFLAGS += -fno-common -nostdlib
-CFLAGS += -I.
+CFLAGS += -I$(INC)
 
 # Disable PIE when possible
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
@@ -51,13 +42,14 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
-# 明确添加.c到.o的规则，虽然Make有隐式规则，但为清晰起见
-$K/%.o: $K/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+MODULES = $(shell ls -d $(K)/*)
 
-# 汇编文件的编译规则
-$K/%.o: $K/%.S
-	$(CC) $(CFLAGS) -c -o $@ $<
+OBJS = $(foreach module, $(MODULES), \
+		$(patsubst %.c, %.o, $(wildcard $(module)/*.c)) \
+		$(patsubst %.S, %.o, $(wildcard $(module)/*.S)))
+
+%.o: %.S
+	$(CC) -g -c -o $@ $<
 
 $K/kernel: $(OBJS) $K/kernel.ld
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
@@ -74,7 +66,7 @@ qemu: $K/kernel
 # 清理规则
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*/*.o */*.d */*.asm */*.sym \
+	*/*.o */*.d */*.asm */*.sym */*/*.o */*/*.d */*/*.asm */*/*.sym\
 	$K/kernel .gdbinit
 
 # 调试相关
