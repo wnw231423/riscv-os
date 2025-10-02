@@ -223,11 +223,6 @@ w_pmpaddr0(uint64 x)
   asm volatile("csrw pmpaddr0, %0" : : "r" (x));
 }
 
-// use riscv's sv39 page table scheme.
-#define SATP_SV39 (8L << 60)
-
-#define MAKE_SATP(pagetable) (SATP_SV39 | (((uint64)pagetable) >> 12))
-
 // supervisor address translation and protection;
 // holds the address of the page table.
 static inline void 
@@ -354,7 +349,37 @@ typedef uint64 *pagetable_t; // 512 PTEs
 // #endif // __ASSEMBLER__
 
 #define PGSIZE 4096 // bytes per page
+#define PGSHIFT 12  // bits of offset within a page
 
 #define PGROUNDUP(sz) (((sz)+PGSIZE-1) & ~(PGSIZE-1))
+#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
+
+// use riscv's sv39 page table scheme.
+#define SATP_SV39 (8L << 60)
+
+#define MAKE_SATP(pagetable) (SATP_SV39 | (((uint64)pagetable) >> 12))
+
+// extract the three 9-bit page table indices from a virtual address.
+#define PXMASK          0x1FF // 9 bits
+#define PXSHIFT(level)  (PGSHIFT+(9*(level)))
+#define PX(level, va) ((((uint64) (va)) >> PXSHIFT(level)) & PXMASK)
+
+// one beyond the highest possible virtual address.
+// MAXVA is actually one bit less than the max allowed by
+// Sv39, to avoid having to sign-extend virtual addresses
+// that have the high bit set.
+#define MAXVA (1L << (9 + 9 + 9 + 12 - 1))
+
+#define PTE_V (1 << 0) // valid
+#define PTE_R (1 << 1) // read
+#define PTE_W (1 << 2) // write
+#define PTE_X (1 << 3) // execute
+#define PTE_U (1 << 4) // user
+#define PTE_G (1 << 5) // global
+#define PTE_A (1 << 6) // accessed
+#define PTE_D (1 << 7) // dirty
+
+#define PA2PTE(pa) ((((uint64)(pa)) >> 12) << 10)
+#define PTE2PA(pte) (((pte) >> 10) << 12)
 
 #endif

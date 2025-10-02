@@ -1,3 +1,6 @@
+#ifndef PMEM_H
+#define PMEM_H
+
 #include "lib/spinlock.h"
 #include "types.h"
 
@@ -14,3 +17,5 @@ typedef struct alloc_region {
 } alloc_region_t;
 
 static alloc_region_t kern_region, user_region;
+
+#endif

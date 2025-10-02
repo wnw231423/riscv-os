@@ -37,8 +37,21 @@ int strncmp(const char *, const char *, uint);
 char *strncpy(char *, const char *, int);
 
 // pmem.c
-void pmem_init();
+void pmem_init(void);
 void *pmem_alloc(int);
 void pmem_free(void *);
+
+// vmem.c
+pagetbl_t kvmmake(void);
+void kvmmap(pagetbl_t, uint64, uint64, uint64, int);
+void vm_print(pagetbl_t);
+void kvminit(void);
+void kvminithart(void);
+pte_t *vm_getpte(pagetbl_t, uint64, int);
+int vm_mappages(pagetbl_t, uint64, uint64, uint64, int);
+void vm_unmappages(pagetbl_t, uint64, uint64, int);
+
+// tests
+void lab2p1(void);
 
 #endif
