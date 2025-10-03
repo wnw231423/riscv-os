@@ -4,7 +4,7 @@
 
 volatile static int started = 0;
 
-int main() {
+void main() {
     int cpuid = r_tp();
 
     if(cpuid == 0) {
@@ -24,7 +24,8 @@ int main() {
         printf("cpu %d is booting!\n", cpuid);      
     }
 
-    lab2p1();
+    //lab2p1();
+    lab2p2();
 
     while (1);    
 }

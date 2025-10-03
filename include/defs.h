@@ -53,5 +53,6 @@ void vm_unmappages(pagetbl_t, uint64, uint64, int);
 
 // tests
 void lab2p1(void);
+void lab2p2(void);
 
 #endif
