@@ -50,6 +50,17 @@ pte_t *vm_getpte(pagetbl_t, uint64, int);
 int vm_mappages(pagetbl_t, uint64, uint64, uint64, int);
 void vm_unmappages(pagetbl_t, uint64, uint64, int);
 
+// timer.c
+void timer_init();
+void timer_create();
+void timer_update();
+uint64 timer_get_ticks();
+
+// trap_kernel.c
+void trap_kernel_init();
+void trap_kernel_inithart();
+void trap_kernel_handler();
+
 // tests
 void lab2p1(void);
 void lab2p2(void);
