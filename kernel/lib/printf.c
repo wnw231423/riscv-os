@@ -6,7 +6,7 @@ volatile int panicked = 0;
 volatile int panicking = 0;
 
 static struct {
-    struct spinlock lock;
+    spinlock_t lock;
 } pr;
 
 static char digits[] = "0123456789abcdef";

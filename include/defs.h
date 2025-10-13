@@ -2,8 +2,7 @@
 #define DEFS_H
 
 #include "types.h"
-
-struct spinlock;
+#include "lib/spinlock.h"
 
 // uart.c
 void uartinit(void);
@@ -11,10 +10,10 @@ void uart_putc_sync(char c);
 void uart_puts(char *s);
 
 // spinlock.c
-void acquire(struct spinlock *);
-int holding(struct spinlock *);
-void initlock(struct spinlock *, char *);
-void release(struct spinlock *);
+void acquire(spinlock_t *);
+int holding(spinlock_t *);
+void initlock(spinlock_t *, char *);
+void release(spinlock_t *);
 void push_off(void);
 void pop_off(void);
 

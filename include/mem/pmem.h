@@ -11,7 +11,7 @@ typedef struct page_node {
 typedef struct alloc_region {
   uint64 begin;
   uint64 end;
-  spinlock lock;
+  spinlock_t lock;
   uint32 num;
   page_node_t *free_list;
 } alloc_region_t;

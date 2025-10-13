@@ -9,7 +9,7 @@
 #include "defs.h"
 
 void
-initlock(struct spinlock *lk, char *name)
+initlock(spinlock_t *lk, char *name)
 {
   lk->name = name;
   lk->locked = 0;
@@ -19,7 +19,7 @@ initlock(struct spinlock *lk, char *name)
 // Acquire the lock.
 // Loops (spins) until the lock is acquired.
 void
-acquire(struct spinlock *lk)
+acquire(spinlock_t *lk)
 {
   push_off(); // disable interrupts to avoid deadlock.
   if(holding(lk))
@@ -44,7 +44,7 @@ acquire(struct spinlock *lk)
 
 // Release the lock.
 void
-release(struct spinlock *lk)
+release(spinlock_t *lk)
 {
   if(!holding(lk))
     panic("release");
@@ -74,7 +74,7 @@ release(struct spinlock *lk)
 // Check whether this cpu is holding the lock.
 // Interrupts must be off.
 int
-holding(struct spinlock *lk)
+holding(spinlock_t *lk)
 {
   int r;
   r = (lk->locked && lk->cpu == mycpu());
