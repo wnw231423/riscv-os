@@ -1,7 +1,6 @@
 #include "types.h"
 #include "defs.h"
 #include "riscv.h"
-#include "memlayout.h"
 
 // in trap.S, calls trap_kernel_handler()
 void kernel_vector();
@@ -19,7 +18,15 @@ void trap_kernel_inithart(){
 }
 
 void trap_kernel_handler() {
-    timer_interrupt_handler();
+    uint64 scause = r_scause();
+    printf("trap! scause=%ld\n", scause);  // 调试信息
+    
+    if(scause == 0x8000000000000005L) {
+        printf("Timer interrupt!\n");
+        timer_interrupt_handler();
+    } else {
+        printf("Unknown: %ld\n", scause);
+    }
 }
 
 void timer_interrupt_handler() {

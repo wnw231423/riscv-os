@@ -28,5 +28,6 @@ void main() {
         trap_kernel_inithart();     
     }
 
-    while (1);    
+    intr_on();
+    for(;;);
 }
