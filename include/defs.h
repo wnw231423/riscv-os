@@ -8,6 +8,7 @@
 void uartinit(void);
 void uart_putc_sync(char c);
 void uart_puts(char *s);
+void uart_intr(void);
 
 // spinlock.c
 void acquire(spinlock_t *);
@@ -55,6 +56,12 @@ void timer_init();
 void timer_create();
 void timer_update();
 uint64 timer_get_ticks();
+
+// plic.c
+void plic_init(void);
+void plic_init_hart(void);
+int plic_claim(void);
+void plic_complete(int);
 
 // trap_kernel.c
 void trap_kernel_init();

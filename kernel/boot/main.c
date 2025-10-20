@@ -15,6 +15,8 @@ void main() {
         kvminithart();
         trap_kernel_init();
         trap_kernel_inithart();
+        plic_init();
+        plic_init_hart();
 
         printf("cpu %d is booting!\n", cpuid);
         __sync_synchronize();
@@ -25,7 +27,8 @@ void main() {
         __sync_synchronize();
         printf("cpu %d is booting!\n", cpuid); 
         kvminithart();
-        trap_kernel_inithart();     
+        trap_kernel_inithart();
+        //plic_init_hart();     
     }
 
     intr_on();

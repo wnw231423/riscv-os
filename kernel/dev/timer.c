@@ -3,8 +3,6 @@
 #include "riscv.h"
 #include "dev/timer.h"
 
-#define INTERVAL 1000000
-
 timer_t timer;
 
 // ask each hart to generate timer interrupts.

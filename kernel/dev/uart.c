@@ -77,3 +77,24 @@ void uart_puts(char* s) {
         s++;
     }
 }
+
+int uart_getc(void) {
+    if (ReadReg(LSR) & LSR_RX_READY) {
+        return ReadReg(RHR);
+    } else {
+        return -1;
+    }
+}
+
+void uart_intr(void) {
+    ReadReg(ISR);
+
+    while(1){
+        int c = uart_getc();
+        if (c == -1) {
+            break;
+        }
+        printf("%c", c);
+    }
+    printf("\n");
+}
