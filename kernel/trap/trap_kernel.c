@@ -37,9 +37,9 @@ void trap_kernel_handler() {
 void timer_interrupt_handler() {
     if (cpuid() == 0) {
         uint64 ticks = timer_get_ticks();
-        //if (ticks % 100 == 0) {
+        if (ticks % 10 == 0) {
             printf("timer tick %ld\n", ticks);
-        //}
+        }
         timer_update();
     }
 
@@ -51,8 +51,8 @@ void external_interrupt_handler() {
 
     if (irq == UART0_IRQ) {
         uart_intr();
-    } else {
-        printf("Unknown external interrupt.\n");
+    } else if (irq) {
+        printf("UNK external intr.");
     }
 
     if (irq) {

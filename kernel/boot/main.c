@@ -28,7 +28,7 @@ void main() {
         printf("cpu %d is booting!\n", cpuid); 
         kvminithart();
         trap_kernel_inithart();
-        //plic_init_hart();     
+        plic_init_hart();     
     }
 
     intr_on();

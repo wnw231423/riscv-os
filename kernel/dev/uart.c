@@ -96,5 +96,4 @@ void uart_intr(void) {
         }
         printf("%c", c);
     }
-    printf("\n");
 }
