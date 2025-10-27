@@ -21,6 +21,8 @@ void pop_off(void);
 // proc.c
 int cpuid(void);
 struct cpu *mycpu(void);
+void proc_make_first();
+pagetable_t proc_pgtbl_init(uint64 trapframe);
 
 // printf.c
 int printf(char *, ...) __attribute__((format(printf, 1, 2)));
@@ -50,6 +52,8 @@ void kvminithart(void);
 pte_t *vm_getpte(pagetbl_t, uint64, int);
 int vm_mappages(pagetbl_t, uint64, uint64, uint64, int);
 void vm_unmappages(pagetbl_t, uint64, uint64, int);
+pagetbl_t vm_upage_create();
+void vm_upage_free(pagetbl_t pagetable, uint64 sz);
 
 // timer.c
 void timer_init();

@@ -6,6 +6,9 @@
 
 pagetbl_t kernel_pagetable;
 
+// in trampoline.S
+extern char trampoline[];
+
 extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 // Make a direct-map page table for the kernel.
@@ -34,10 +37,10 @@ kvmmake(void)
 
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
-  //kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
   // allocate and map a kernel stack for each process.
-  //proc_mapstacks(kpgtbl);
+  proc_mapstacks(kpgtbl);
   
   return kpgtbl;
 }
@@ -164,3 +167,39 @@ void vm_unmappages(pagetbl_t pagetable, uint64 va, uint64 npages, int do_free) {
   }
 }
 
+// create an empty user page table
+// return 0 if out of memory
+pagetbl_t vm_upage_create() {
+    pagetbl_t pagetable;
+    pagetable = (pagetbl_t) pmem_alloc(1);
+    if(pagetbl == 0) {
+        return 0;
+    }
+    memset(pagetable, 0, PGSIZE);
+    return pagetable;
+}
+
+// Recursively free page-table pages
+// All leaf mappings must already haven been removed
+void vm_freewalk(pagetbl_t pagetable) {
+    for (int i = 0; i < 512; i++) {
+        pte_t pte = pagetable[i];
+        if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0) {
+            // this PTE points to a lower-level page table.
+            uint64 child = PTE2PA(pte);
+            vm_freewalk((pagetable_t)child);
+            pagetable[i] = 0;
+        } else if (pte & PTE_V) {
+            panic("freewalk: leaf");
+        }
+    }
+    pmem_free((void*)pagetable);
+}
+
+// Free user memory pages,
+// then free page-table pages
+void vm_upage_free(pagetbl_t pagetable, uint64 sz) {
+    if (sz > 0)
+        vm_unmappages(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
+    vm_freewalk(pagetable);
+}
