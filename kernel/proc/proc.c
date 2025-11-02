@@ -68,7 +68,16 @@ pagetbl_t proc_pgtbl_init(uint64 trapframe) {
 }
 
 void alloc_proc(proc_t *p) {
-    
+    p->pid = 0;
+    if ((p->trapframe = (trapframe_t *)pmem_alloc(1)) == 0) {
+        free_proc(p);
+        return 0;
+    }
+
+    if ((p->pgtbl = proc_pgtbl_init((uint64)(p->trapframe))) == 0) {
+        free_proc(p);
+        return 0;
+    }
 }
 
 void proc_make_first() {
