@@ -1,6 +1,7 @@
 #ifndef PROC_H
 #define PROC_H
 
+#include "param.h"
 #include "types.h"
 
 typedef struct context {
@@ -21,15 +22,6 @@ typedef struct context {
     uint64 s10;
     uint64 s11;
 } context_t;
-
-// Per-CPU state.
-struct cpu {
-    int noff;                   // Depth of push_off() nesting.
-    int intena;                 // Were interrupts enabled before push_off()?
-};
-
-extern struct cpu cpus[NCPU];
-
 
 typedef struct trapframe {
     /*   0 */ uint64 kernel_satp;   // kernel page table
@@ -74,7 +66,7 @@ typedef struct trapframe {
 typedef struct proc {
     int pid;
 
-    pagetable_t pgtbl;
+    pagetbl_t pgtbl;
     uint64 heap_top;
     uint64 ustack_pages;
     trapframe_t *trapframe;
@@ -82,5 +74,15 @@ typedef struct proc {
     uint64 kstack;
     context_t ctx;
 } proc_t;
+
+// Per-CPU state.
+typedef struct cpu {
+    int noff;       // 关中断的深度
+    int intena;     // 第一次关中断前的状态
+    proc_t* proc;   // cpu上运行的进程
+    context_t ctx;  // 内核上下文暂存
+} cpu_t;
+
+extern cpu_t cpus[NCPU];
 
 #endif

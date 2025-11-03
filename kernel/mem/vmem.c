@@ -172,7 +172,7 @@ void vm_unmappages(pagetbl_t pagetable, uint64 va, uint64 npages, int do_free) {
 pagetbl_t vm_upage_create() {
     pagetbl_t pagetable;
     pagetable = (pagetbl_t) pmem_alloc(1);
-    if(pagetbl == 0) {
+    if(pagetable == 0) {
         return 0;
     }
     memset(pagetable, 0, PGSIZE);

@@ -22,7 +22,8 @@ void pop_off(void);
 int cpuid(void);
 struct cpu *mycpu(void);
 void proc_make_first();
-pagetable_t proc_pgtbl_init(uint64 trapframe);
+pagetbl_t proc_pgtbl_init(uint64);
+void proc_mapstacks(pagetbl_t);
 
 // printf.c
 int printf(char *, ...) __attribute__((format(printf, 1, 2)));

@@ -4,7 +4,8 @@
 trampoline:
 .align 4
 
-.globl user_vector:
+.globl user_vector 
+user_vector:
 #------------------sd 过程 (begin)-----------------------
 
         # sscratch寄存器存放了p->trapframe

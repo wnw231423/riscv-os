@@ -2,6 +2,7 @@
 #define SPINLOCK_H
 
 #include "types.h"
+#include "proc/proc.h"
 
 // Mutual exclusion lock.
 typedef struct spinlock {
@@ -9,7 +10,7 @@ typedef struct spinlock {
 
   // For debugging:
   char *name;      // Name of lock.
-  struct cpu *cpu; // The cpu holding the lock.
+  cpu_t *cpu; // The cpu holding the lock.
 } spinlock_t;
 
 #endif

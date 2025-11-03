@@ -22,15 +22,18 @@ void main() {
         __sync_synchronize();
         started = 1;
 
+        intr_on();
+        proc_make_first();
     } else {
         while(started == 0);
         __sync_synchronize();
         printf("cpu %d is booting!\n", cpuid); 
         kvminithart();
         trap_kernel_inithart();
-        plic_init_hart();     
+        plic_init_hart();   
+        intr_on();
+        for(;;);  
     }
 
-    intr_on();
-    for(;;);
+
 }

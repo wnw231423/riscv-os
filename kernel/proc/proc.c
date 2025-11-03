@@ -2,18 +2,27 @@
 #include "param.h"
 #include "proc/proc.h"
 #include "riscv.h"
+#include "memlayout.h"
+#include "proc/initcode.h"
+#include "defs.h"
 
-struct cpu cpus[NCPU];
+cpu_t cpus[NCPU];
 
 int cpuid() {
     int id = r_tp();
     return id;
 }
 
-struct cpu* mycpu() {
+cpu_t* mycpu() {
     int id = cpuid();
-    struct cpu *c = &cpus[id];
+    cpu_t *c = &cpus[id];
     return c;
+}
+
+proc_t* myproc() {
+    cpu_t *c = mycpu();
+    proc_t *p = c->proc;
+    return p;
 }
 
 // in trampoline.S
@@ -31,15 +40,14 @@ static proc_t proczero;
 // Map it high in memory, followed by an invalid
 // guard page.
 void proc_mapstacks(pagetable_t kpgtbl) {
-    proc_t *p = &proczero;
+    //proc_t *p = &proczero;
     char *pa = pmem_alloc(0);
     if (pa == 0) {
-        panic("pmem_alloc")
+        panic("pmem_alloc");
     }
     uint64 va = KSTACK(0);
     kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
 }
-
 
 pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     pagetbl_t proc_pgtbl;
@@ -52,7 +60,7 @@ pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     // try to map trampoline
     if(vm_mappages(proc_pgtbl, TRAMPOLINE, PGSIZE,
                     (uint64)trampoline, PTE_R | PTE_X) < 0) {
-        vm_upage_free(pagetable, 0);
+        vm_upage_free(proc_pgtbl, 0);
         return 0;
     }
 
@@ -67,19 +75,50 @@ pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     return proc_pgtbl;
 }
 
-void alloc_proc(proc_t *p) {
+extern void prepare_ret();
+
+int alloc_proc(proc_t *p) {
+    // pid
     p->pid = 0;
+
+    // trapframe
     if ((p->trapframe = (trapframe_t *)pmem_alloc(1)) == 0) {
-        free_proc(p);
-        return 0;
+        return 1;
     }
 
+    // pagetable
     if ((p->pgtbl = proc_pgtbl_init((uint64)(p->trapframe))) == 0) {
-        free_proc(p);
-        return 0;
+        return 1;
     }
+    proc_pgtbl_init((uint64)p->trapframe);
+
+    // heap_top
+    p->heap_top = 0;
+
+    // ustack_pages
+    p->ustack_pages = 0;
+
+    // kstack
+    p->kstack = KSTACK(0);
+
+    // set proc context
+    memset(&p->ctx, 0, sizeof(p->ctx));
+    p->ctx.ra = (uint64)prepare_ret;
+    p->ctx.sp = p->kstack + PGSIZE;  // sp要指向栈顶
+
+    return 0;
 }
 
 void proc_make_first() {
     alloc_proc(&proczero);
+    // switch to proczero
+    mycpu()->proc = &proczero;
+    swtch(&mycpu()->ctx, &proczero.ctx);
+}
+
+void prepare_ret() {
+    proc_t *p = myproc();
+    uint64 satp = MAKE_SATP(p->pagetable);
+    uint64 trampoline_userret = TRAMPOLINE + (userret - trampoline);
+    ((void (*)(uint64))trampoline_userret)(satp);
 }
