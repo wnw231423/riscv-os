@@ -50,17 +50,17 @@ OBJS = $(foreach module, $(MODULES), \
 OBJS := $(filter-out $K/proc/initcode.o, $(OBJS))
 
 %.o: %.S
-	$(CC) -g -c -o $@ $<
+	$(CC) -g -I$(INC) -c -o $@ $<
 
 # for lab4
-INIT: $K/proc/initcode.c
-	$(CC) $(CFLAGS) -I . -march=rv64g -nostdinc -c $K/proc/initcode.c -o $K/proc/initcode.o
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $K/proc/initcode.out $K/proc/initcode.o
-	$(OBJCOPY) -S -O binary $K/proc/initcode.out $K/proc/initcode
-	xxd -i $K/proc/initcode > $(INC)/proc/initcode.h
-	rm -f $K/proc/initcode $K/proc/initcode.d $K/proc/initcode.o $K/proc/initcode.out
+# INIT: $K/proc/initcode.c
+# 	$(CC) $(CFLAGS) -I . -march=rv64g -nostdinc -c $K/proc/initcode.c -o $K/proc/initcode.o
+# 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $K/proc/initcode.out $K/proc/initcode.o
+# 	$(OBJCOPY) -S -O binary $K/proc/initcode.out $K/proc/initcode
+# 	xxd -i $K/proc/initcode > $(INC)/proc/initcode.h
+# 	rm -f $K/proc/initcode $K/proc/initcode.d $K/proc/initcode.o $K/proc/initcode.out
 
-$K/kernel: INIT $(OBJS) $K/kernel.ld
+$K/kernel: $(OBJS) $K/kernel.ld
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym

@@ -20,7 +20,8 @@ void pop_off(void);
 
 // proc.c
 int cpuid(void);
-struct cpu *mycpu(void);
+cpu_t *mycpu(void);
+proc_t *myproc(void);
 void proc_make_first();
 pagetbl_t proc_pgtbl_init(uint64);
 void proc_mapstacks(pagetbl_t);
@@ -72,6 +73,11 @@ void plic_complete(int);
 void trap_kernel_init();
 void trap_kernel_inithart();
 void trap_kernel_handler();
+void timer_interrupt_handler();
+void external_interrupt_handler();
+
+// trap_user.c
+void trap_user_return();
 
 // tests
 void lab2p1(void);

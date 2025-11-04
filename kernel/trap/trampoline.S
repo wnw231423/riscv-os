@@ -1,3 +1,6 @@
+#include "riscv.h"
+#include "memlayout.h"
+
 .section trampsec
 
 .globl trampoline
@@ -68,18 +71,20 @@ user_vector:
 
 
 # 用户态trap处理完成后返回
-# user_return(trapframe, pagetable)
+# user_return(pagetable)
 .globl user_return
 user_return:
+        # usertrap() returns here, with user satp in a0.
+        # return from kernel to user.
 
-        # 切换到用户页表
-        csrw satp, a1
+        # switch to the user page table.
+        sfence.vma zero, zero
+        csrw satp, a0
         sfence.vma zero, zero
 
-#---------------------ld 过程 (begin)----------------------
-        ld t0, 112(a0)
-        csrw sscratch, t0 
+        li a0, TRAPFRAME
 
+        # restore all but a0 from TRAPFRAME
         ld ra, 40(a0)
         ld sp, 48(a0)
         ld gp, 56(a0)
@@ -111,9 +116,9 @@ user_return:
         ld t5, 272(a0)
         ld t6, 280(a0)
 
-        csrrw a0, sscratch, a0
-
-#---------------------ld 过程 (end)----------------------
-
-        # S-mode to U-mode
+	# restore user a0
+        ld a0, 112(a0)
+        
+        # return to user mode and user pc.
+        # usertrapret() set up sstatus and sepc.
         sret  

@@ -24,6 +24,7 @@ void main() {
 
         intr_on();
         proc_make_first();
+        for(;;);
     } else {
         while(started == 0);
         __sync_synchronize();

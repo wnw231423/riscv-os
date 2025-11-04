@@ -98,5 +98,4 @@ void external_interrupt_handler() {
     if (irq) {
         plic_complete(irq);
     }
-
 }

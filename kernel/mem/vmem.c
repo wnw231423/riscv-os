@@ -87,10 +87,10 @@ vmprint_helper(pagetbl_t pagetable, uint64 start, int level){
       printf("%p: pte %p pa %p\n", (void*)start, (void*)pte, (void*)child);
       if (level > 0) {
         //  child is sub-pagetable.
-        vmprint_helper((pagetable_t)child, start, level - 1);
+        vmprint_helper((pagetbl_t)child, start, level - 1);
       }
     }
-    start += (1 << PXSHIFT(2));
+    start += (1 << PXSHIFT(level));
   }
 }
 
@@ -107,7 +107,7 @@ pte_t* vm_getpte(pagetbl_t pagetable, uint64 va, int alloc) {
   for(int level = 2; level > 0; level--) {
     pte_t *pte = &pagetable[PX(level, va)];
     if(*pte & PTE_V) {
-      pagetable = (pagetable_t)PTE2PA(*pte);
+      pagetable = (pagetbl_t)PTE2PA(*pte);
     } else {
       if(!alloc || (pagetable = (pte_t*)pmem_alloc(0)) == 0)
         return 0;
@@ -187,7 +187,7 @@ void vm_freewalk(pagetbl_t pagetable) {
         if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0) {
             // this PTE points to a lower-level page table.
             uint64 child = PTE2PA(pte);
-            vm_freewalk((pagetable_t)child);
+            vm_freewalk((pagetbl_t)child);
             pagetable[i] = 0;
         } else if (pte & PTE_V) {
             panic("freewalk: leaf");
