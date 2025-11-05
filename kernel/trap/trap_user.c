@@ -100,7 +100,7 @@ void trap_user_return() {
     uint64 trampoline_userret = TRAMPOLINE + (user_return - trampoline);
 
     // for debug
-    vm_print(p->pgtbl);
+    //vm_print(p->pgtbl);
 
     ((void (*)(uint64))trampoline_userret)(satp);
 }
