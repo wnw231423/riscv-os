@@ -1,0 +1,91 @@
+#include "types.h"
+#include "param.h"
+#include "memlayout.h"
+#include "riscv.h"
+#include "lib/spinlock.h"
+#include "proc/proc.h"
+#include "syscall/syscall_num.h"
+#include "defs.h"
+
+// Prototypes for the functions that handle system calls.
+// in sysproc.c
+extern uint64 sys_sbrk(void);
+
+// An array mapping syscall num to the function
+static uint64 (*syscalls[])(void) = {
+    [SYS_sbrk]  sys_sbrk,
+};
+
+// handle syscall, called in trap_user.c
+void syscall(void) {
+    int num;
+    proc_t *p = myproc();
+
+    num = p->trapframe->a7;
+    if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+        // Use num to lookup the system call function for num, call it,
+        // and store its return value in p->trapframe->a0
+        p->trapframe->a0 = syscalls[num]();
+    } else {
+        printf("%d: unknown sys call %d\n",
+                p->pid, num);
+        p->trapframe->a0 = -1;
+    }
+}
+
+static uint64
+argraw(int n)
+{
+  proc_t *p = myproc();
+  switch (n) {
+  case 0:
+    return p->trapframe->a0;
+  case 1:
+    return p->trapframe->a1;
+  case 2:
+    return p->trapframe->a2;
+  case 3:
+    return p->trapframe->a3;
+  case 4:
+    return p->trapframe->a4;
+  case 5:
+    return p->trapframe->a5;
+  }
+  panic("argraw");
+  return -1;
+}
+
+// 基于参数寄存器编号的读取
+void arg_uint32(int n, uint32* ip) {
+    *ip = (uint32)argraw(n);
+}
+
+void arg_uint64(int n, uint64* ip) {
+    *ip = argraw(n);
+}
+
+// Fetch the nul-terminated string at addr from the current process.
+// Returns length of string, not including nul, or -1 for error.
+int
+fetchstr(uint64 addr, char *buf, int max)
+{
+  proc_t *p = myproc();
+  if(copyinstr(p->pagetable, buf, addr, max) < 0)
+    return -1;
+  return strlen(buf);
+}
+
+// Retrieve an argument as a pointer.
+// Doesn't check for legality, since
+// copyin/copyout will do that.
+void
+argaddr(int n, uint64 *ip)
+{
+  *ip = argraw(n);
+}
+
+void arg_str(int n, char* buf, int maxlen) {
+    uint64 addr;
+    argaddr(n, &addr);
+    return fetchstr(addr, buf, max);
+}

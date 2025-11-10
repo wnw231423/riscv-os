@@ -79,6 +79,12 @@ void external_interrupt_handler();
 // trap_user.c
 void trap_user_return();
 
+// syscall.c 
+void arg_uint32(int, uint32*);
+void arg_uint64(int, uint64*);
+void arg_str(int, char*, int);
+void syscall();
+
 // tests
 void lab2p1(void);
 void lab2p2(void);

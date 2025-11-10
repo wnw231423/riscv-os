@@ -75,6 +75,7 @@ kvminithart(void)
   sfence_vma();
 }
 
+// helper function of vm_print
 void
 vmprint_helper(pagetbl_t pagetable, uint64 start, int level){
   for (int i = 0; i < 512; i++) {
@@ -94,12 +95,14 @@ vmprint_helper(pagetbl_t pagetable, uint64 start, int level){
   }
 }
 
+// print a pagetable
 void
 vm_print(pagetbl_t pagetable) {
   printf("page table %p\n", pagetable);
   vmprint_helper(pagetable, 0, 2);
 }
 
+// same as "walk" in xv6
 pte_t* vm_getpte(pagetbl_t pagetable, uint64 va, int alloc) {
   if(va >= MAXVA)
   panic("walk");
@@ -202,4 +205,44 @@ void vm_upage_free(pagetbl_t pagetable, uint64 sz) {
     if (sz > 0)
         vm_unmappages(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
     vm_freewalk(pagetable);
+}
+
+// allocate pages for user proc to grow its heap
+// return newsz or 0 if error
+uint64 vm_u_alloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz, int xperm) {
+    char *mem;
+    uint64 a;
+
+    if(newsz < oldsz)
+        return oldsz;
+
+    oldsz = PGROUNDUP(oldsz);
+    for (a = oldsz; a < newsz; a += PGSIZE) {
+        mem = pmem_alloc(1);
+        if (mem == 0) {
+            vm_u_dealloc(pagetable, a, oldsz);
+            return 0;
+        }
+        memset(mem, 0, PGSIZE);
+        if(vm_mappages(pagetable, a, PGSIZE, (uint64)mem, PTE_R | PTE_U | xperm) != 0) {
+            pmem_free(mem);
+            vm_u_dealloc(pagetable, a, oldsz);
+            return 0;
+        }
+    }
+    return newsz;
+}
+
+// dealloc to bring the heap top from oldsz to newsz
+// return the newsz
+uint64 vm_u_dealloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz) {
+    if (newsz >= oldsz)
+        return oldsz;
+
+    if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
+        int npages = (PGROUNDUP(oldsz) - PGROUNDUP(newsz)) / PGSIZE;
+        vm_unmappages(pagetable, PGROUNDUP(newsz), npages, 1);
+    }
+
+    return newsz;
 }
