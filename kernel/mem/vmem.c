@@ -121,6 +121,27 @@ pte_t* vm_getpte(pagetbl_t pagetable, uint64 va, int alloc) {
   return &pagetable[PX(0, va)];
 }
 
+// Look up a virtual address, return the physical address,
+// or 0 if not mapped.
+// Can only be used to look up user pages.
+uint64 vm_getpa(pagetbl_t pagetable, uint64 va) {
+    pte_t *pte;
+    uint64 pa;
+
+    if(va >= MAXVA)
+        return 0;
+
+    pte = vm_getpte(pagetable, va, 0);
+    if(pte == 0)
+        return 0;
+    if((*pte & PTE_V) == 0)
+        return 0;
+    if((*pte & PTE_U) == 0)
+        return 0;
+    pa = PTE2PA(*pte);
+    return pa;
+}
+
 int vm_mappages(pagetbl_t pagetable, uint64 va, uint64 size, uint64 pa, int perm) {
   uint64 a, last;
   pte_t *pte;
@@ -207,8 +228,8 @@ void vm_upage_free(pagetbl_t pagetable, uint64 sz) {
     vm_freewalk(pagetable);
 }
 
-// allocate pages for user proc to grow its heap
-// return newsz or 0 if error
+// allocate pages for user proc to grow its heap top from old to new
+// return new heap top or 0 if error
 uint64 vm_u_alloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz, int xperm) {
     char *mem;
     uint64 a;
@@ -233,7 +254,7 @@ uint64 vm_u_alloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz, int xperm) {
     return newsz;
 }
 
-// dealloc to bring the heap top from oldsz to newsz
+// dealloc to bring the heap top from old to new
 // return the newsz
 uint64 vm_u_dealloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz) {
     if (newsz >= oldsz)
@@ -246,3 +267,86 @@ uint64 vm_u_dealloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz) {
 
     return newsz;
 }
+
+// Copy a null-terminated string from user to kernel.
+// Copy bytes to dst from virtual address srcva in a given page table,
+// until a '\0', or max.
+// Return 0 on success, -1 on error.
+int
+copyinstr(pagetbl_t pagetable, char *dst, uint64 srcva, uint64 max)
+{
+  uint64 n, va0, pa0;
+  int got_null = 0;
+
+  while(got_null == 0 && max > 0){
+    va0 = PGROUNDDOWN(srcva);
+    pa0 = vm_getpa(pagetable, va0);
+    if(pa0 == 0)
+      return -1;
+    n = PGSIZE - (srcva - va0);
+    if(n > max)
+      n = max;
+
+    char *p = (char *) (pa0 + (srcva - va0));
+    while(n > 0){
+      if(*p == '\0'){
+        *dst = '\0';
+        got_null = 1;
+        break;
+      } else {
+        *dst = *p;
+      }
+      --n;
+      --max;
+      p++;
+      dst++;
+    }
+
+    srcva = va0 + PGSIZE;
+  }
+  if(got_null){
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+// allocate and map user memory if process is referencing a page
+// that was lazily allocated in sys_sbrk().
+// returns 0 if va is invalid or already mapped, or if
+// out of physical memory, and physical address if successful.
+// uint64
+// vmfault(pagetable_t pagetable, uint64 va, int read)
+// {
+//   uint64 mem;
+//   struct proc *p = myproc();
+
+//   if (va >= p->heap_top)
+//     return 0;
+//   va = PGROUNDDOWN(va);
+//   if(ismapped(pagetable, va)) {
+//     return 0;
+//   }
+//   mem = (uint64) pmem_alloc(1);
+//   if(mem == 0)
+//     return 0;
+//   memset((void *) mem, 0, PGSIZE);
+//   if (mappages(p->pagetable, va, PGSIZE, mem, PTE_W|PTE_U|PTE_R) != 0) {
+//     pmem_free((void *)mem);
+//     return 0;
+//   }
+//   return mem;
+// }
+
+// int
+// ismapped(pagetable_t pagetable, uint64 va)
+// {
+//   pte_t *pte = walk(pagetable, va, 0);
+//   if (pte == 0) {
+//     return 0;
+//   }
+//   if (*pte & PTE_V){
+//     return 1;
+//   }
+//   return 0;
+// }

@@ -39,6 +39,7 @@ void trap_user_handler() {
         p->trapframe->epc += 4;
         intr_on();
         printf("get a syscall from proc %d\n", myproc()->pid);
+        syscall();
     } else if (scause == 0x8000000000000009L) {
         // SEI
         external_interrupt_handler();

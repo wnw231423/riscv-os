@@ -90,8 +90,8 @@ int alloc_proc(proc_t *p) {
         return 1;
     }
 
-    // heap_top
-    p->heap_top = 0;
+    // heap_sz
+    p->heap_top = 2*PGSIZE;
 
     // ustack_pages
     p->ustack_pages = 1;
@@ -104,17 +104,17 @@ int alloc_proc(proc_t *p) {
     p->ctx.ra = (uint64)trap_user_return;
     p->ctx.sp = p->kstack + PGSIZE;  // sp要指向栈顶
 
-    // set inst, data and stack
+    // set inst and stack
+    // inst
     extern unsigned char kernel_proc_initcode[];
-
     uint64 code_page = (uint64)pmem_alloc(1);
     memset((void*)code_page, 0, PGSIZE);
     memmove((void*)code_page, kernel_proc_initcode, sizeof(kernel_proc_initcode));
-    vm_mappages(p->pgtbl, PGSIZE, PGSIZE, code_page, PTE_R | PTE_X | PTE_U);
-    p->trapframe->epc = PGSIZE;
-
-    vm_mappages(p->pgtbl, 2*PGSIZE, PGSIZE, (uint64)pmem_alloc(1), PTE_W | PTE_R | PTE_U);
-    p->trapframe->sp = 3*PGSIZE;
+    vm_mappages(p->pgtbl, 0, PGSIZE, code_page, PTE_R | PTE_X | PTE_U);
+    p->trapframe->epc = 0;
+    // stack
+    vm_mappages(p->pgtbl, PGSIZE, PGSIZE, (uint64)pmem_alloc(1), PTE_W | PTE_R | PTE_U);
+    p->trapframe->sp = 2*PGSIZE;
 
     return 0;
 }
@@ -124,4 +124,21 @@ void proc_make_first() {
     // switch to proczero
     mycpu()->proc = &proczero;
     swtch(&mycpu()->ctx, &proczero.ctx);
+}
+
+// return 0 on success, -1 on failure
+int grow_proc(int n) {
+    uint64 heap_top;
+    proc_t *p = myproc();
+
+    heap_top = p->heap_top;
+    if (n > 0) {
+        if ((heap_top = vm_u_alloc(p->pgtbl, heap_top, heap_top + n, PTE_W)) == 0) {
+            return -1;
+        }
+    } else if (n < 0) {
+        heap_top = vm_u_dealloc(p->pgtbl, heap_top, heap_top + n);
+    }
+    p->heap_top = heap_top;
+    return 0;
 }

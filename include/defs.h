@@ -25,6 +25,7 @@ proc_t *myproc(void);
 void proc_make_first();
 pagetbl_t proc_pgtbl_init(uint64);
 void proc_mapstacks(pagetbl_t);
+int grow_proc(int);
 
 // printf.c
 int printf(char *, ...) __attribute__((format(printf, 1, 2)));
@@ -52,10 +53,14 @@ void vm_print(pagetbl_t);
 void kvminit(void);
 void kvminithart(void);
 pte_t *vm_getpte(pagetbl_t, uint64, int);
+uint64 vm_getpe(pagetbl_t, uint64);
 int vm_mappages(pagetbl_t, uint64, uint64, uint64, int);
 void vm_unmappages(pagetbl_t, uint64, uint64, int);
 pagetbl_t vm_upage_create();
 void vm_upage_free(pagetbl_t pagetable, uint64 sz);
+uint64 vm_u_alloc(pagetbl_t, uint64, uint64, int);
+uint64 vm_u_dealloc(pagetbl_t, uint64, uint64);
+int copyinstr(pagetbl_t, char *, uint64, uint64);
 
 // timer.c
 void timer_init();
@@ -79,14 +84,18 @@ void external_interrupt_handler();
 // trap_user.c
 void trap_user_return();
 
-// syscall.c 
+// syscall.c
+void arg_int(int, int *);
 void arg_uint32(int, uint32*);
 void arg_uint64(int, uint64*);
-void arg_str(int, char*, int);
+int arg_str(int, char*, int);
 void syscall();
 
 // tests
 void lab2p1(void);
 void lab2p2(void);
+
+// number of elements in fixed-size array
+#define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
 #endif

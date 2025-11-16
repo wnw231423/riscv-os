@@ -22,7 +22,8 @@ void syscall(void) {
     proc_t *p = myproc();
 
     num = p->trapframe->a7;
-    if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    //if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    if(num > 0 && syscalls[num]) {
         // Use num to lookup the system call function for num, call it,
         // and store its return value in p->trapframe->a0
         p->trapframe->a0 = syscalls[num]();
@@ -55,6 +56,10 @@ argraw(int n)
   return -1;
 }
 
+void arg_int(int n, int *ip) {
+    *ip = argraw(n);
+}
+
 // 基于参数寄存器编号的读取
 void arg_uint32(int n, uint32* ip) {
     *ip = (uint32)argraw(n);
@@ -70,7 +75,7 @@ int
 fetchstr(uint64 addr, char *buf, int max)
 {
   proc_t *p = myproc();
-  if(copyinstr(p->pagetable, buf, addr, max) < 0)
+  if(copyinstr(p->pgtbl, buf, addr, max) < 0)
     return -1;
   return strlen(buf);
 }
@@ -84,8 +89,8 @@ argaddr(int n, uint64 *ip)
   *ip = argraw(n);
 }
 
-void arg_str(int n, char* buf, int maxlen) {
+int arg_str(int n, char* buf, int maxlen) {
     uint64 addr;
     argaddr(n, &addr);
-    return fetchstr(addr, buf, max);
+    return fetchstr(addr, buf, maxlen);
 }

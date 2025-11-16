@@ -63,6 +63,13 @@ typedef struct trapframe {
     /* 280 */ uint64 t6;   
 } trapframe_t;
 
+// The memory layout of a process:
+//   trampoline
+//   trapframe
+//   ...
+//   heap
+//   stack (1 page)
+//   code (1 page)
 typedef struct proc {
     int pid;
 
