@@ -1,4 +1,4 @@
-#define SYS_print 0   // 系统调用测试
+#define SYS_print   0
 #define SYS_fork    1
 #define SYS_exit    2
 #define SYS_wait    3
@@ -20,3 +20,6 @@
 // #define SYS_link   19
 // #define SYS_mkdir  20
 // #define SYS_close  21
+#define SYS_mmap    22
+#define SYS_munmap  23
+#define SYS_sleep   24

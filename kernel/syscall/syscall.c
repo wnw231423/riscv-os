@@ -9,11 +9,25 @@
 
 // Prototypes for the functions that handle system calls.
 // in sysproc.c
+extern uint64 sys_print(void);
+extern uint64 sys_fork(void);
+extern uint64 sys_exit(void);
+extern uint64 sys_wait(void);
 extern uint64 sys_sbrk(void);
+extern uint64 sys_mmap(void);
+extern uint64 sys_munmap(void);
+extern uint64 sys_sleep(void);
 
 // An array mapping syscall num to the function
 static uint64 (*syscalls[])(void) = {
+    [SYS_print] sys_print,
+    [SYS_fork]  sys_fork,
+    [SYS_exit]  sys_exit,
+    [SYS_wait]  sys_wait,
     [SYS_sbrk]  sys_sbrk,
+    [SYS_mmap]  sys_mmap,
+    [SYS_munmap] sys_munmap,
+    [SYS_sleep] sys_sleep,
 };
 
 // handle syscall, called in trap_user.c

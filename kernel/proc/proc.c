@@ -34,13 +34,19 @@ extern void swtch(context_t *old, context_t *new);
 // in trap_user.c
 extern void trap_user_return();
 
-static proc_t proczero;
+proc_t proc[NPROC];
+
+proc_t *proczero;
+
+// TODO: I have no idea what does this lock do. 
+// must be acquired before any p->lock
+spinlock_t wait_lock;
 
 // Allocate a page for each proc's kernel stack.
 // Map it high in memory, followed by an invalid
 // guard page.
 void proc_mapstacks(pagetbl_t kpgtbl) {
-    //proc_t *p = &proczero;
+    proc_t *p = proczero;
     char *pa = pmem_alloc(0);
     if (pa == 0) {
         panic("pmem_alloc");
@@ -120,10 +126,10 @@ int alloc_proc(proc_t *p) {
 }
 
 void proc_make_first() {
-    alloc_proc(&proczero);
+    alloc_proc(proczero);
     // switch to proczero
-    mycpu()->proc = &proczero;
-    swtch(&mycpu()->ctx, &proczero.ctx);
+    mycpu()->proc = proczero;
+    swtch(&mycpu()->ctx, proczero->ctx);
 }
 
 // return 0 on success, -1 on failure
@@ -141,4 +147,44 @@ int grow_proc(int n) {
     }
     p->heap_top = heap_top;
     return 0;
+}
+
+// pass p's abandoned children to init proc
+// Caller must hold wait_lock
+void reparent(proc_t *p) {
+    proc_t *pp;
+
+    for(pp = proc; pp < &proc[NPROC]; pp++) {
+        if(pp->parent == p) {
+            pp->parent = proczero;
+            wakeup(initproc);
+        }
+    }
+}
+
+// Exit the current process
+void kexit(int status) {
+    proc_t *p = myproc();
+    
+    if (p == proczero)
+        panic("init exiting");
+
+    acquire(&wait_lock);
+
+    // Given any children to init
+    reparent(p);
+
+    // Parent might be sleeping in wait()
+    wakeup(p->parent);
+
+    acquire(&p->lock);
+
+    p->xstate = status;
+    p->state = ZOMBIE;
+
+    release(&wait_lock);
+    release(&p->lock);
+    // never to return
+    //sched();
+    //panic("zombie exit");
 }

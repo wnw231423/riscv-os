@@ -16,3 +16,10 @@ uint64 sys_sbrk(void) {
     }
     return addr;
 }
+
+uint64 sys_exit(void) {
+    int n;
+    arg_int(0, &n);
+    kexit(n);
+    return 0;
+}

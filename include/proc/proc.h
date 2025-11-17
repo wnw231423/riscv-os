@@ -63,6 +63,8 @@ typedef struct trapframe {
     /* 280 */ uint64 t6;   
 } trapframe_t;
 
+
+enum procstate { UNUSED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE};
 // The memory layout of a process:
 //   trampoline
 //   trapframe
@@ -71,7 +73,14 @@ typedef struct trapframe {
 //   stack (1 page)
 //   code (1 page)
 typedef struct proc {
+    spinlock_t lock;
+
     int pid;
+    enum procstate state;
+    void *chan;
+    int killed;
+    int xstate;
+    proc_t *parent;
 
     pagetbl_t pgtbl;
     uint64 heap_top;
