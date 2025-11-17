@@ -76,10 +76,11 @@ typedef struct proc {
     spinlock_t lock;
 
     int pid;
-    enum procstate state;
-    void *chan;
+    enum procstate state;  // process state
+    void *chan;            // sleeping on chan
     int killed;
-    int xstate;
+    int xstate;            // exit status to be returned to parent's wait
+    
     proc_t *parent;
 
     pagetbl_t pgtbl;

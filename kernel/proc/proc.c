@@ -192,12 +192,14 @@ void kexit(int status) {
     //panic("zombie exit");
 }
 
+// TODO:
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int kfork() {
 
 }
 
+// TODO:
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int kwait(uint64 addr) {
