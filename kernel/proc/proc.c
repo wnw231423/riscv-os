@@ -81,6 +81,9 @@ pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     return proc_pgtbl;
 }
 
+// TODO: 
+// alloc for all proc_blocks.
+// deprecate the proczero initilization work from this function.
 int alloc_proc(proc_t *p) {
     // pid
     p->pid = 0;
@@ -187,4 +190,16 @@ void kexit(int status) {
     // never to return
     //sched();
     //panic("zombie exit");
+}
+
+// Create a new process, copying the parent.
+// Sets up child kernel stack to return as if from fork() system call.
+int kfork() {
+
+}
+
+// Wait for a child process to exit and return its pid.
+// Return -1 if this process has no children.
+int kwait(uint64 addr) {
+    
 }
