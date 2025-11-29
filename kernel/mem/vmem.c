@@ -268,6 +268,77 @@ uint64 vm_u_dealloc(pagetbl_t pagetable, uint64 oldsz, uint64 newsz) {
     return newsz;
 }
 
+// Given a parent process's page table, copy
+// its memory into a child's page table.
+// Copies both the page table and the
+// physical memory.
+// returns 0 on success, -1 on failure.
+// frees any allocated pages on failure.
+// Used in these cases:
+//   1. to fork a proc, you need to do a vm_u_copy.
+int vm_u_copy(pagetbl_t old, pagetbl_t new, uint64 sz) {
+    pte_t *pte;
+    uint64 pa, i;
+    uint flags;
+    char *mem;
+
+    for (int i = 0; i < sz; i += PGSIZE) {
+        if ((pte = vm_getpte(old, i, 0)) == 0)
+            continue;
+        if ((*pte & PTE_V) == 0)
+            continue;
+        pa = PTE2PA(*pte);
+        flags = PTE_FLAGS(*pte);
+        if ((mem = pmem_alloc(1)) == 0)
+            goto err;
+        memmove(mem, (char*)pa, PGSIZE);
+        if (vm_mappages(new, i, PGSIZE, (uint64)mem, flags) != 0) {
+            pmem_free(mem);
+            goto err;
+        }
+    }
+    return 0;
+
+err:
+    vm_unmappages(new, 0, i / PGSIZE, 1);
+    return -1;
+}
+
+// Copy from kernel to user.
+// Copy len bytes from src to virtual address dstva in a given page table.
+// Return 0 on success, -1 on error.
+// Used in these cases:
+//   1. kwait syscall. copy the xstate of the child proc to parent proc's given addr.
+int copyout(pagetbl_t pagetable, uint64 dstva, char *src, uint64 len) {
+    uint64 n, va0, pa0;
+    pte *pte;
+
+    while (len > 0) {
+        va0 = PGROUNDDOWN(dstva);
+        if (va0 >= MAXVA)
+            return -1;
+
+        pa0 = vm_getpa(pagetable, va0);
+        if (pa0 == 0) {
+            return -1;
+        }
+
+        pte = vm_getpte(pagetable, va0, 0);
+        if ((*pte & PTE_W) == 0)
+            return -1;
+
+        n = PGSIZE - (dstva -va0);
+        if (n > len)
+            n = len;
+        memmove((void*)(pa0 + (dstva - va0)), src, n);
+
+        len -= n;
+        src += n;
+        dstva = va0 + PGSIZE;
+    }
+    return 0;
+}
+
 // Copy a null-terminated string from user to kernel.
 // Copy bytes to dst from virtual address srcva in a given page table,
 // until a '\0', or max.
@@ -350,3 +421,5 @@ copyinstr(pagetbl_t pagetable, char *dst, uint64 srcva, uint64 max)
 //   }
 //   return 0;
 // }
+
+

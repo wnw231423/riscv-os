@@ -17,14 +17,15 @@ void main() {
         trap_kernel_inithart();
         plic_init();
         plic_init_hart();
+        init_zero();
 
         printf("cpu %d is booting!\n", cpuid);
         __sync_synchronize();
         started = 1;
 
-        intr_on();
-        proc_make_first();
-        for(;;);
+        //intr_on();
+        //proc_make_first();
+        //for(;;);
     } else {
         while(started == 0);
         __sync_synchronize();
@@ -32,9 +33,9 @@ void main() {
         kvminithart();
         trap_kernel_inithart();
         plic_init_hart();   
-        intr_on();
-        for(;;);  
+        //intr_on();
+        //for(;;);  
     }
 
-
+    proc_scheduler();
 }

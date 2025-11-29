@@ -1,10 +1,12 @@
 #include "types.h"
 #include "param.h"
+#include "defs.h"
+#include "lib/spinlock.h"
 #include "proc/proc.h"
 #include "riscv.h"
 #include "memlayout.h"
 #include "proc/initcode.h"
-#include "defs.h"
+
 
 /*** things about CPU ***/
 cpu_t cpus[NCPU];
@@ -66,13 +68,15 @@ int alloc_pid() {
 // Map it high in memory, followed by an invalid guard page.
 // Used for initializing kernel memory.
 void proc_mapstacks(pagetbl_t kpgtbl) {
-    proc_t *p = proczero;
-    char *pa = pmem_alloc(0);
-    if (pa == 0) {
-        panic("pmem_alloc");
+    proc_t *p;
+    for (p = proc; p < &proc[NPROC]; p++) {
+        char *pa = pmem_alloc(0);
+        if (pa == 0) {
+            panic("pmem_alloc");
+        }
+        uint64 va = KSTACK((int) (p - proc));
+        kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     }
-    uint64 va = KSTACK(0);
-    kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
 }
 
 // initialize the proc table.
@@ -112,6 +116,15 @@ static pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     }
 
     return proc_pgtbl;
+}
+
+// set up first user process
+void init_zero(void) {
+    proc_t *p;
+    p = alloc_proc();
+    proczero = p;
+    p->state = RUNNABLE;
+    release(&p->lock);
 }
 
 // find an unusued proc
@@ -161,8 +174,6 @@ found:
     memset(&p->ctx, 0, sizeof(p->ctx));
     p->ctx.ra = (uint64)forkret;
     p->ctx.sp = p->kstack + PGSIZE;  // sp要指向栈顶
-
-
 
     return p;
 }
@@ -257,18 +268,199 @@ void kexit(int status) {
     //panic("zombie exit");
 }
 
-// TODO:
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int kfork() {
+    int i, pid;
+    proc_t *np;
+    proc_t* p = myproc();
 
+    if ((np = alloc_proc() == 0)) {
+        return -1;
+    }
+
+    if (vm_u_copy(p->pgtbl, np->pgtbl, p->heap_top) < 0) {
+        free_proc(np);
+        release(&np->lock);
+        return -1;
+    }
+    np->heap_top = p->heap_top;
+
+    // copy saved user registers
+    *(np->trapframe) = *(p->trapframe);
+
+    // fork should return 0
+    np->trapframe->a0 = 0;
+
+    pid = np->pid;
+
+    release(&np->lock);
+
+    acquire(&wait_lock);
+    np->parent = p;
+    release(&wait_lock);
+
+    acquire(&np->lock);
+    np->state = RUNNABLE;
+    release(&np->lock);
+
+    return pid;
 }
 
-// TODO:
+int
+killed(proc_t *p)
+{
+  int k;
+  
+  acquire(&p->lock);
+  k = p->killed;
+  release(&p->lock);
+  return k;
+}
+
 // Wait for a child process to exit and return its pid.
 // Return -1 if this process has no children.
 int kwait(uint64 addr) {
+    proc_t *pp;
+    int havekids, pid;
+    proc_t *p = myproc();
     
+    acquire(&wait_lock);
+
+    for(;;) {
+        havekids = 0;
+        for (pp = proc; pp < &proc[NPROC]; pp++) {
+            if (pp->parent == p) {
+                acquire(&pp->lock);
+                havekids = 1;
+                if (pp->state == ZOMBIE) {
+                    pid = pp->pid;
+                    if (addr != 0 && copyout(p->pagetable, addr, (char *)&pp->xstate,
+                                             sizeof(pp->xstate)) <0) {
+                        release(&pp->lock);
+                        release(&wait_lock);
+                        return -1;
+                    }
+                    free_proc(pp);
+                    release(&pp->lock);
+                    release(&wait_lock);
+                    return pid;
+                }
+            release(&pp->lock);
+            }
+        }
+
+        if (!havekids || killed(p)) {
+            release(&wait_lock);
+            return -1;
+        }
+
+        sleep(p, &wait_lock);
+    }
+}
+
+// Sleep on channel chan, releasing condition lock lk.
+// Re-acquires lk when awakened.
+void sleep(void *chan, spinlock_t *lk) {
+    proc_t *p = myproc();
+
+    acquire(&p->lock);
+    release(lk);
+
+    p->chan = chan;
+    p->state = SLEEPING;
+
+    sched();
+
+    p->chan = 0;
+    release(&p->lock);
+    acquire(lk);
+}
+
+// Wake up all processes sleeping on channel chan.
+// Caller should hold the condition lock.
+void wakeup(void *chan) {
+    proc_t *p;
+    for (p = proc; p < &proc[NPROC]; p++) {
+        if (p != myproc()) {
+            acquire(&p->lock);
+            if (p->state == SLEEPING && p->chan == chan) {
+                p->state = RUNNABLE;
+            }
+            release(&p->lock);
+        }
+    }
+}
+
+// Per-CPU process scheduler.
+// Each CPU calls scheduler() after setting itself up.
+// Scheduler never returns.  It loops, doing:
+//  - choose a process to run.
+//  - swtch to start running that process.
+//  - eventually that process transfers control
+//    via swtch back to the scheduler.
+void proc_scheduler(void) {
+    proc_t p;
+    cpu_t *c = mycpu();
+
+    c->proc = 0;
+    for (;;) {
+        intr_on();
+        intr_off();
+
+        int found = 0;
+        for (p = proc; p < &proc[NPROC]; p++) {
+            acquire(&p->lock);
+            if(p->state == RUNNABLE) {
+                p->state = RUNNING;
+                c->proc = p;
+                swtch(&c->context, &p->context);
+
+                c->proc = 0;
+                found = 1;
+            }
+            release(&p->lock);
+        }
+        if (found == 0) {
+            asm volatile("wfi");
+        }
+    }
+}
+
+// Switch to scheduler.  Must hold only p->lock
+// and have changed proc->state. Saves and restores
+// intena because intena is a property of this
+// kernel thread, not this CPU. It should
+// be proc->intena and proc->noff, but that would
+// break in the few places where a lock is held but
+// there's no process.
+void proc_sched(void) {
+    int intena;
+    proc_t *p = myproc();
+
+    if (!holding(&p->lock))
+        panic("sched p->lock");
+    if(mycpu()->noff != 1)
+        panic("sched locks");
+    if(p->state == RUNNING)
+        panic("sched RUNNING");
+    if(intr_get())
+        panic("sched interruptible")
+
+    intena = mycpu()->intena;
+    swtch(&p->context, &mycpu->context);
+    mycpu()->intena = intena;
+}
+
+// Give up the CPU for one scheduling round.
+void
+yield(void)
+{
+  proc_t *p = myproc();
+  acquire(&p->lock);
+  p->state = RUNNABLE;
+  sched();
+  release(&p->lock);
 }
 
 // A fork child's very first scheduling by scheduler()
