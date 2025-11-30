@@ -176,6 +176,7 @@ found:
     // pagetable
     if ((p->pgtbl = proc_pgtbl_init((uint64)(p->trapframe))) == 0) {
         free_proc(p);
+        release(&p->lock);
         return 0;
     }
 
@@ -256,10 +257,10 @@ void kexit(int status) {
     p->state = ZOMBIE;
 
     release(&wait_lock);
-    release(&p->lock);
+    
     // never to return
-    //sched();
-    //panic("zombie exit");
+    proc_sched();
+    panic("zombie exit");
 }
 
 // Create a new process, copying the parent.
@@ -472,6 +473,8 @@ void forkret(void) {
     extern char user_ret[];
     proc_t *p = myproc();
     static int first = 1;
+
+    release(&p->lock);
 
     if (first) {
         first = 0;

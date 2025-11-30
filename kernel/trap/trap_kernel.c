@@ -61,6 +61,7 @@ void trap_kernel_inithart(){
 void trap_kernel_handler() {
     uint64 sepc = r_sepc();
     uint64 scause = r_scause();
+    uint64 sstatus = r_sstatus();
     
     if (scause == 0x8000000000000009L) {
         // SEI
@@ -68,6 +69,13 @@ void trap_kernel_handler() {
     } else if(scause == 0x8000000000000005L) {
         // STI
         timer_interrupt_handler();
+        if (myproc() != 0) {
+            yield();
+            // the yield() may have caused some traps to occur,
+            // so restore trap registers for use by kernelvec.S's sepc instruction.
+            w_sepc(sepc);
+            w_sstatus(sstatus);
+        }
     } else {
         printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, sepc, r_stval());
         panic("UNK intr");

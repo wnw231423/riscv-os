@@ -16,18 +16,16 @@ extern uint64 sys_wait(void);
 extern uint64 sys_sbrk(void);
 extern uint64 sys_mmap(void);
 extern uint64 sys_munmap(void);
-extern uint64 sys_sleep(void);
 
 // An array mapping syscall num to the function
 static uint64 (*syscalls[])(void) = {
-    //[SYS_print] sys_print,
-    //[SYS_fork]  sys_fork,
+    [SYS_print] sys_print,
+    [SYS_fork]  sys_fork,
     [SYS_exit]  sys_exit,
-    //[SYS_wait]  sys_wait,
+    [SYS_wait]  sys_wait,
     [SYS_sbrk]  sys_sbrk,
-    //[SYS_mmap]  sys_mmap,
-    //[SYS_munmap] sys_munmap,
-    //[SYS_sleep] sys_sleep,
+    [SYS_mmap]  sys_mmap,
+    [SYS_munmap] sys_munmap,
 };
 
 // handle syscall, called in trap_user.c
@@ -37,9 +35,10 @@ void syscall(void) {
 
     num = p->trapframe->a7;
     //if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    if(num > 0 && syscalls[num]) {
+    if(num >= 0 && syscalls[num]) {
         // Use num to lookup the system call function for num, call it,
         // and store its return value in p->trapframe->a0
+        printf("receive number %d syscall.\n", num);
         p->trapframe->a0 = syscalls[num]();
     } else {
         printf("%d: unknown sys call %d\n",

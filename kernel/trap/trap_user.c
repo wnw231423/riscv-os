@@ -16,7 +16,7 @@ extern char* exception_info[16]; // 异常错误信息
 
 // 在user_vector()里面调用
 // 用户态trap处理的核心逻辑
-void trap_user_handler() {
+uint64 trap_user_handler() {
     uint64 sepc = r_sepc();          // 记录了发生异常时的pc值
     uint64 sstatus = r_sstatus();    // 与特权模式和中断相关的状态信息
     uint64 scause = r_scause();      // 引发trap的原因
@@ -46,11 +46,18 @@ void trap_user_handler() {
     } else if(scause == 0x8000000000000005L) {
         // STI
         timer_interrupt_handler();
+        yield();
     } else {
         printf("unexpected scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, sepc, stval);
     }
 
-    trap_user_return();
+    //trap_user_return
+
+    prepare_return();
+
+    uint64 satp = MAKE_SATP(p->pgtbl);
+
+    return satp;
 }
 
 //
@@ -93,15 +100,17 @@ prepare_return(void)
 
 // 调用user_return()
 // 内核态返回用户态
-void trap_user_return() {
-    proc_t *p = myproc();
+// 仅用于初次
+// 被forkret取代
+// void trap_user_return() {
+//     proc_t *p = myproc();
 
-    prepare_return();
-    uint64 satp = MAKE_SATP(p->pgtbl);
-    uint64 trampoline_userret = TRAMPOLINE + (user_ret - trampoline);
+//     prepare_return();
+//     uint64 satp = MAKE_SATP(p->pgtbl);
+//     uint64 trampoline_userret = TRAMPOLINE + (user_ret - trampoline);
 
-    // for debug
-    //vm_print(p->pgtbl);
+//     // for debug
+//     //vm_print(p->pgtbl);
 
-    ((void (*)(uint64))trampoline_userret)(satp);
-}
+//     ((void (*)(uint64))trampoline_userret)(satp);
+// }

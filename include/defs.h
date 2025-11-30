@@ -101,13 +101,14 @@ void external_interrupt_handler();
 
 // trap_user.c
 void prepare_return();
-void trap_user_return();
+//void trap_user_return();
 
 // syscall.c
 void arg_int(int, int *);
 void arg_uint32(int, uint32*);
 void arg_uint64(int, uint64*);
 int arg_str(int, char*, int);
+void argaddr(int, uint64*);
 void syscall();
 
 // tests
