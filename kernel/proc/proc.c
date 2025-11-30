@@ -83,7 +83,7 @@ void proc_mapstacks(pagetbl_t kpgtbl) {
 void proc_init(void) {
     proc_t *p;
 
-    initlock(&pid_lock, "nextpid")
+    initlock(&pid_lock, "nextpid");
     initlock(&wait_lock, "wait_lock");
     for (p = proc; p < &proc[NPROC]; p++) {
         initlock(&p->lock, "proc");
@@ -118,65 +118,13 @@ static pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     return proc_pgtbl;
 }
 
-// set up first user process
-void init_zero(void) {
-    proc_t *p;
-    p = alloc_proc();
-    proczero = p;
-    p->state = RUNNABLE;
-    release(&p->lock);
+// free a process's pagetable, including the physical memory.
+void proc_free_pagetable(pagetbl_t pagetable, uint64 sz) {
+    vm_unmappages(pagetable, TRAMPOLINE, 1, 0);
+    vm_unmappages(pagetable, TRAPFRAME, 1, 0);
+    vm_upage_free(pagetable, sz);
 }
 
-// find an unusued proc
-// if found, initialize and return with p->lock held
-// if there's any error, return 0
-static proc_t* alloc_proc(void) {
-    proc_t *p;
-
-    for (p = proc; p < &proc[NPROC]; p++) {
-        acquire(&p->lock);
-        if (p->state == UNUSED) {
-            goto found;
-        } else {
-            release(&p->lock);
-        }
-    }
-    return 0;
-
-found:
-    p->pid = alloc_pid();
-    p->state = USED;
-
-    // trapframe
-    if ((p->trapframe = (trapframe_t *)pmem_alloc(1)) == 0) {
-        free_proc(p);
-        release(&p->lock);
-        return 0;
-    }
-    memset((void*)p->trapframe, 0, PGSIZE);
-
-    // pagetable
-    if ((p->pgtbl = proc_pgtbl_init((uint64)(p->trapframe))) == 0) {
-        free_proc(P);
-        return 0;
-    }
-
-    // heap_sz
-    p->heap_top = 2*PGSIZE;
-
-    // ustack_pages
-    p->ustack_pages = 1;
-
-    // kstack
-    p->kstack = KSTACK(0);
-
-    // set proc context
-    memset(&p->ctx, 0, sizeof(p->ctx));
-    p->ctx.ra = (uint64)forkret;
-    p->ctx.sp = p->kstack + PGSIZE;  // sp要指向栈顶
-
-    return p;
-}
 
 // free a proc, p->lock must be held.
 static void free_proc(proc_t *p) {
@@ -195,11 +143,57 @@ static void free_proc(proc_t *p) {
     p->state = UNUSED;
 }
 
-// free a process's pagetable, including the physical memory.
-void proc_free_pagetable(pagetbl_t pagetable, uint64 sz) {
-    vm_unmappages(pagetable, TRAMPOLINE, 1, 0);
-    vm_unmappages(pagetable, TRAPFRAME, 1, 0);
-    vm_upage_free(pagetable, sz);
+void forkret(void);
+// find an unusued proc
+// if found, initialize and return with p->lock held
+// if there's any error, return 0
+static proc_t* alloc_proc(void) {
+    proc_t *p;
+
+    for (p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if (p->state == UNUSED) {
+            goto found;
+        } else {
+            release(&p->lock);
+        }
+    }
+    return 0;
+
+found:
+    p->pid = alloc_pid();
+    //p->state = USED;
+    p->state = RUNNABLE;
+
+    // trapframe
+    if ((p->trapframe = (trapframe_t *)pmem_alloc(1)) == 0) {
+        free_proc(p);
+        release(&p->lock);
+        return 0;
+    }
+    memset((void*)p->trapframe, 0, PGSIZE);
+
+    // pagetable
+    if ((p->pgtbl = proc_pgtbl_init((uint64)(p->trapframe))) == 0) {
+        free_proc(p);
+        return 0;
+    }
+
+    // heap_sz
+    p->heap_top = 2*PGSIZE;
+
+    // ustack_pages
+    p->ustack_pages = 1;
+
+    // kstack
+    p->kstack = KSTACK(0);
+
+    // set proc context
+    memset(&p->ctx, 0, sizeof(p->ctx));
+    p->ctx.ra = (uint64)forkret;
+    p->ctx.sp = p->kstack + PGSIZE;  // sp要指向栈顶
+
+    return p;
 }
 
 // This function is deprecated after introducing scheduling.
@@ -236,7 +230,7 @@ void reparent(proc_t *p) {
     for(pp = proc; pp < &proc[NPROC]; pp++) {
         if(pp->parent == p) {
             pp->parent = proczero;
-            wakeup(initproc);
+            wakeup(proczero);
         }
     }
 }
@@ -271,11 +265,11 @@ void kexit(int status) {
 // Create a new process, copying the parent.
 // Sets up child kernel stack to return as if from fork() system call.
 int kfork() {
-    int i, pid;
+    int pid;
     proc_t *np;
-    proc_t* p = myproc();
+    proc_t *p = myproc();
 
-    if ((np = alloc_proc() == 0)) {
+    if ((np = alloc_proc()) == 0) {
         return -1;
     }
 
@@ -335,7 +329,7 @@ int kwait(uint64 addr) {
                 havekids = 1;
                 if (pp->state == ZOMBIE) {
                     pid = pp->pid;
-                    if (addr != 0 && copyout(p->pagetable, addr, (char *)&pp->xstate,
+                    if (addr != 0 && copyout(p->pgtbl, addr, (char *)&pp->xstate,
                                              sizeof(pp->xstate)) <0) {
                         release(&pp->lock);
                         release(&wait_lock);
@@ -370,7 +364,7 @@ void sleep(void *chan, spinlock_t *lk) {
     p->chan = chan;
     p->state = SLEEPING;
 
-    sched();
+    proc_sched();
 
     p->chan = 0;
     release(&p->lock);
@@ -400,7 +394,7 @@ void wakeup(void *chan) {
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
 void proc_scheduler(void) {
-    proc_t p;
+    proc_t *p;
     cpu_t *c = mycpu();
 
     c->proc = 0;
@@ -414,7 +408,7 @@ void proc_scheduler(void) {
             if(p->state == RUNNABLE) {
                 p->state = RUNNING;
                 c->proc = p;
-                swtch(&c->context, &p->context);
+                swtch(&c->ctx, &p->ctx);
 
                 c->proc = 0;
                 found = 1;
@@ -445,12 +439,21 @@ void proc_sched(void) {
     if(p->state == RUNNING)
         panic("sched RUNNING");
     if(intr_get())
-        panic("sched interruptible")
+        panic("sched interruptible");
 
     intena = mycpu()->intena;
-    swtch(&p->context, &mycpu->context);
+    swtch(&p->ctx, &mycpu()->ctx);
     mycpu()->intena = intena;
 }
+
+// set up first user process
+void init_zero(void) {
+    proc_t *p;
+    p = alloc_proc();
+    proczero = p;
+    release(&p->lock);
+}
+
 
 // Give up the CPU for one scheduling round.
 void
@@ -459,14 +462,14 @@ yield(void)
   proc_t *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
-  sched();
+  proc_sched();
   release(&p->lock);
 }
 
 // A fork child's very first scheduling by scheduler()
 // will swtch to forkret.
 void forkret(void) {
-    extern char userret[];
+    extern char user_ret[];
     proc_t *p = myproc();
     static int first = 1;
 
@@ -489,7 +492,7 @@ void forkret(void) {
 
     // return to user space, mimicing usertrap()'s return.
     prepare_return();
-    uint64 satp = MAKE_SATP(p->pagetable);
-    uint64 trampoline_userret = TRAMPOLINE + (userret - trampoline);
+    uint64 satp = MAKE_SATP(p->pgtbl);
+    uint64 trampoline_userret = TRAMPOLINE + (user_ret - trampoline);
     ((void (*)(uint64))trampoline_userret)(satp);
 }

@@ -5,7 +5,7 @@
 // in trampoline.S
 extern char trampoline[];      // 内核和用户切换的代码
 extern char user_vector[];     // 用户触发trap进入内核
-extern char user_return[];     // trap处理完毕返回用户
+extern char user_ret[];     // trap处理完毕返回用户
 
 // in trap.S
 extern char kernel_vector[];   // 内核态trap处理流程
@@ -98,7 +98,7 @@ void trap_user_return() {
 
     prepare_return();
     uint64 satp = MAKE_SATP(p->pgtbl);
-    uint64 trampoline_userret = TRAMPOLINE + (user_return - trampoline);
+    uint64 trampoline_userret = TRAMPOLINE + (user_ret - trampoline);
 
     // for debug
     //vm_print(p->pgtbl);

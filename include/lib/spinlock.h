@@ -2,7 +2,8 @@
 #define SPINLOCK_H
 
 #include "types.h"
-#include "proc/proc.h"
+
+typedef struct cpu cpu_t;
 
 // Mutual exclusion lock.
 typedef struct spinlock {

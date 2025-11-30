@@ -3,6 +3,7 @@
 #include "memlayout.h"
 #include "param.h"
 #include "defs.h"
+#include "riscv.h"
 
 pagetbl_t kernel_pagetable;
 
@@ -282,7 +283,7 @@ int vm_u_copy(pagetbl_t old, pagetbl_t new, uint64 sz) {
     uint flags;
     char *mem;
 
-    for (int i = 0; i < sz; i += PGSIZE) {
+    for (i = 0; i < sz; i += PGSIZE) {
         if ((pte = vm_getpte(old, i, 0)) == 0)
             continue;
         if ((*pte & PTE_V) == 0)
@@ -311,7 +312,7 @@ err:
 //   1. kwait syscall. copy the xstate of the child proc to parent proc's given addr.
 int copyout(pagetbl_t pagetable, uint64 dstva, char *src, uint64 len) {
     uint64 n, va0, pa0;
-    pte *pte;
+    pte_t *pte;
 
     while (len > 0) {
         va0 = PGROUNDDOWN(dstva);

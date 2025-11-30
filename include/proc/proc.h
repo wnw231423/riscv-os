@@ -81,7 +81,7 @@ typedef struct proc {
     int killed;
     int xstate;            // exit status to be returned to parent's wait
     
-    proc_t *parent;
+    struct proc *parent;
 
     pagetbl_t pgtbl;
     uint64 heap_top;

@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "lib/spinlock.h"
+#include "proc/proc.h"
 
 // uart.c
 void uartinit(void);
@@ -23,9 +24,9 @@ int cpuid(void);
 cpu_t *mycpu(void);
 proc_t *myproc(void);
 //void proc_make_first();
-pagetbl_t proc_pgtbl_init(uint64);
+//pagetbl_t proc_pgtbl_init(uint64);
 void proc_mapstacks(pagetbl_t);
-void init_zero(void)；
+void init_zero(void);
 void proc_scheduler(void) __attribute__((noreturn));
 void proc_sched(void);
 int grow_proc(int);
@@ -99,6 +100,7 @@ void timer_interrupt_handler();
 void external_interrupt_handler();
 
 // trap_user.c
+void prepare_return();
 void trap_user_return();
 
 // syscall.c
