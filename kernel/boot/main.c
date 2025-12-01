@@ -17,6 +17,7 @@ void main() {
         trap_kernel_inithart();
         plic_init();
         plic_init_hart();
+        proc_init();
         init_zero();
 
         printf("cpu %d is booting!\n", cpuid);

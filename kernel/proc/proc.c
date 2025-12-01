@@ -49,8 +49,14 @@ proc_t *proczero;
 int nextpid = 1;
 spinlock_t pid_lock;
 
-// TODO: I have no idea what does this lock do. 
-// must be acquired before any p->lock
+// wait_lock:
+// This lock serves two purposes:
+// 1. It protects modifications to parent-child relationships between processes.
+//    The lock must be acquired before changing any process's parent pointer.
+// 2. It ensures atomicity between parent checking child state and sleeping.
+//    Without this lock, a race condition could occur where a child exits
+//    after the parent checks for exited children but before the parent sleeps,
+//    causing the parent to miss the wakeup notification.
 spinlock_t wait_lock;
 
 int alloc_pid() {
@@ -132,7 +138,7 @@ static void free_proc(proc_t *p) {
         pmem_free((void*)p->trapframe);
     p->trapframe = 0;
     if (p->pgtbl)
-        proc_free_pagetable(p->pgtbl, p->heap_top);
+        proc_free_pagetable(p->pgtbl, MAXVA - 2*PGSIZE);
     p->pgtbl = 0;
     p->heap_top = 0;
     p->pid = 0;
@@ -184,10 +190,10 @@ found:
     p->heap_top = 2*PGSIZE;
 
     // ustack_pages
-    p->ustack_pages = 1;
+    //p->ustack_pages = 1;
 
     // kstack
-    p->kstack = KSTACK(0);
+    //p->kstack = KSTACK(0);
 
     // set proc context
     memset(&p->ctx, 0, sizeof(p->ctx));
@@ -274,12 +280,13 @@ int kfork() {
         return -1;
     }
 
-    if (vm_u_copy(p->pgtbl, np->pgtbl, p->heap_top) < 0) {
+    if (vm_u_copy(p->pgtbl, np->pgtbl, MAXVA - 2 * PGSIZE) < 0) {
         free_proc(np);
         release(&np->lock);
         return -1;
     }
     np->heap_top = p->heap_top;
+    np->ustack_pages = p->ustack_pages;
 
     // copy saved user registers
     *(np->trapframe) = *(p->trapframe);
@@ -480,6 +487,8 @@ void forkret(void) {
         first = 0;
         __sync_synchronize();
 
+        //p->heap_top = 2*PGSIZE;
+        //p->ustack_pages = 1;
         // set inst and stack
         // inst
         extern unsigned char kernel_proc_initcode[];

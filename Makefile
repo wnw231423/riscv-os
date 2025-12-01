@@ -66,7 +66,7 @@ $K/kernel: INIT $(OBJS) $K/kernel.ld
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
 # QEMU选项
-CPUNUM = 1
+CPUNUM = 3
 QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUNUM) -nographic
 
 qemu: $K/kernel
