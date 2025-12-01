@@ -25,6 +25,7 @@ cpu_t *mycpu(void);
 proc_t *myproc(void);
 //void proc_make_first();
 //pagetbl_t proc_pgtbl_init(uint64);
+void proc_init(void);
 void proc_mapstacks(pagetbl_t);
 void init_zero(void);
 void proc_scheduler(void) __attribute__((noreturn));

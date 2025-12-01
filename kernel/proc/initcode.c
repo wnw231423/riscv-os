@@ -18,7 +18,7 @@ int main()
     // 测试HEAP区域
     long long top = syscall(SYS_sbrk, 0);
     str2 = (char*)top;
-    syscall(SYS_sbrk, top + PGSIZE);
+    syscall(SYS_sbrk, PGSIZE);
 
     str1[0] = 'M';
     str1[1] = 'M';
