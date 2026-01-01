@@ -5,6 +5,7 @@
 // 0x02000000, CLINT
 // 0x0C000000, PLIC
 // 0x10000000, uart0
+// 0x10001000, virtio disk
 // 0x80000000, boot ROM loads our kernel here and jumps to here.
 
 // qemu puts platform-level interrupt controller (PLIC) here.
@@ -18,6 +19,10 @@
 // UART register
 #define UART0 0x10000000L
 #define UART0_IRQ 10
+
+// virtio mmio
+#define VIRTIO0 0x10001000
+#define VIRTIO0_IRQ 1
 
 // physical address for kernel and user pages
 #define KERNBASE 0x80000000L
