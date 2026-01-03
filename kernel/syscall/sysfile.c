@@ -60,8 +60,8 @@ uint64 sys_read(void) {
     int n;
     uint64 p;
 
-    argaddr(1, &p);
-    arg_int(2, &n);
+    argaddr(2, &p);
+    arg_int(1, &n);
     if(argfd(0, 0, &f) < 0) {
         //printf("DEBUG: sys_read failed\n");
         return -1;
@@ -74,8 +74,8 @@ uint64 sys_write(void) {
     int n;
     uint64 p;
     
-    argaddr(1, &p);
-    arg_int(2, &n);
+    argaddr(2, &p);
+    arg_int(1, &n);
     if(argfd(0, 0, &f) < 0) {
         //printf("DEBUG: sys_write failed\n");
         return -1;

@@ -471,6 +471,10 @@ void init_zero(void) {
     proc_t *p;
     p = alloc_proc();
     proczero = p;
+
+    // about file system
+    p->cwd = namei("/");
+    
     release(&p->lock);
 }
 
@@ -524,9 +528,6 @@ void forkret(void) {
         // stack
         vm_mappages(p->pgtbl, PGSIZE, PGSIZE, (uint64)pmem_alloc(1), PTE_W | PTE_R | PTE_U);
         p->trapframe->sp = 2*PGSIZE;
-
-        // about file system
-        p->cwd = namei("/");
 
         // p->trapframe->a0 = kexec("/init", (char *[]){ "/init", 0});
         // if (p->trapframe->a0 == -1) {
