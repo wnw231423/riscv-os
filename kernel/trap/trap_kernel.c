@@ -98,7 +98,9 @@ void external_interrupt_handler() {
     int irq = plic_claim();
 
     if (irq == UART0_IRQ) {
-        uart_intr();
+        uartintr();
+    } else if(irq == VIRTIO0_IRQ) {
+        virtio_disk_intr();
     } else if (irq) {
         printf("UNK external intr.");
     }

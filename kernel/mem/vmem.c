@@ -25,7 +25,7 @@ kvmmake(void)
   kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
   // virtio mmio disk interface
-  //kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+  kvmmap(kpgtbl, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
 
   // PLIC
   kvmmap(kpgtbl, PLIC, PLIC, 0x4000000, PTE_R | PTE_W);
@@ -423,4 +423,45 @@ copyinstr(pagetbl_t pagetable, char *dst, uint64 srcva, uint64 max)
 //   return 0;
 // }
 
+// comment from xv6:
+// Copy from user to kernel.
+// Copy len bytes to dst from virtual address srcva in a given page table.
+// Return 0 on success, -1 on error.
+//
+// comment from me:
+// used for either_copyin in proc.c
+int
+copyin(pagetbl_t pagetable, char *dst, uint64 srcva, uint64 len)
+{
+  uint64 n, va0, pa0;
 
+  while(len > 0){
+    va0 = PGROUNDDOWN(srcva);
+    pa0 = vm_getpa(pagetable, va0);
+    if(pa0 == 0) {
+        return -1;
+    }
+    n = PGSIZE - (srcva - va0);
+    if(n > len)
+      n = len;
+    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
+
+    len -= n;
+    dst += n;
+    srcva = va0 + PGSIZE;
+  }
+  return 0;
+}
+
+// mark a PTE invalid for user access.
+// used by exec for the user stack guard page.
+void
+uvmclear(pagetbl_t pagetable, uint64 va)
+{
+  pte_t *pte;
+  
+  pte = vm_getpte(pagetable, va, 0);
+  if(pte == 0)
+    panic("uvmclear");
+  *pte &= ~PTE_U;
+}

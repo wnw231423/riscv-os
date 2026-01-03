@@ -124,6 +124,10 @@ static pagetbl_t proc_pgtbl_init(uint64 trapframe) {
     return proc_pgtbl;
 }
 
+pagetbl_t proc_pagetable(proc_t *p) {
+    return proc_pgtbl_init((uint64)p->trapframe);
+}
+
 // free a process's pagetable, including the physical memory.
 void proc_free_pagetable(pagetbl_t pagetable, uint64 sz) {
     vm_unmappages(pagetable, TRAMPOLINE, 1, 0);
@@ -187,7 +191,7 @@ found:
     }
 
     // heap_sz
-    p->heap_top = 2*PGSIZE;
+    //p->heap_top = 2*PGSIZE;
 
     // ustack_pages
     //p->ustack_pages = 1;
@@ -249,6 +253,17 @@ void kexit(int status) {
     if (p == proczero)
         panic("init exiting");
 
+    // about file system
+    for (int fd = 0; fd < NOFILE; fd++) {
+        if(p->ofile[fd]) {
+            struct file *f = p->ofile[fd];
+            fileclose(f);
+            p->ofile[fd] = 0;
+        }
+    }
+    iput(p->cwd);
+    p->cwd = 0;
+
     acquire(&wait_lock);
 
     // Given any children to init
@@ -286,13 +301,21 @@ int kfork() {
         return -1;
     }
     np->heap_top = p->heap_top;
-    np->ustack_pages = p->ustack_pages;
+    //np->ustack_pages = p->ustack_pages;
 
     // copy saved user registers
     *(np->trapframe) = *(p->trapframe);
 
     // fork should return 0
     np->trapframe->a0 = 0;
+
+    // about file system
+    for (int i = 0; i < NOFILE; i++) {
+        if (p->ofile[i]) {
+            np->ofile[i] = filedup(p->ofile[i]);
+        }
+    }
+    np->cwd = idup(p->cwd);
 
     pid = np->pid;
 
@@ -307,17 +330,6 @@ int kfork() {
     release(&np->lock);
 
     return pid;
-}
-
-int
-killed(proc_t *p)
-{
-  int k;
-  
-  acquire(&p->lock);
-  k = p->killed;
-  release(&p->lock);
-  return k;
 }
 
 // Wait for a child process to exit and return its pid.
@@ -474,6 +486,17 @@ yield(void)
   release(&p->lock);
 }
 
+int
+killed(proc_t *p)
+{
+  int k;
+  
+  acquire(&p->lock);
+  k = p->killed;
+  release(&p->lock);
+  return k;
+}
+
 // A fork child's very first scheduling by scheduler()
 // will swtch to forkret.
 void forkret(void) {
@@ -484,10 +507,11 @@ void forkret(void) {
     release(&p->lock);
 
     if (first) {
+        fsinit(ROOTDEV);
         first = 0;
         __sync_synchronize();
 
-        //p->heap_top = 2*PGSIZE;
+        p->heap_top = 2*PGSIZE;
         //p->ustack_pages = 1;
         // set inst and stack
         // inst
@@ -500,6 +524,14 @@ void forkret(void) {
         // stack
         vm_mappages(p->pgtbl, PGSIZE, PGSIZE, (uint64)pmem_alloc(1), PTE_W | PTE_R | PTE_U);
         p->trapframe->sp = 2*PGSIZE;
+
+        // about file system
+        p->cwd = namei("/");
+
+        // p->trapframe->a0 = kexec("/init", (char *[]){ "/init", 0});
+        // if (p->trapframe->a0 == -1) {
+        //     panic("exec");
+        // }
     }
 
     // return to user space, mimicing usertrap()'s return.
@@ -507,4 +539,36 @@ void forkret(void) {
     uint64 satp = MAKE_SATP(p->pgtbl);
     uint64 trampoline_userret = TRAMPOLINE + (user_ret - trampoline);
     ((void (*)(uint64))trampoline_userret)(satp);
+}
+
+// comment from xv6:
+// Copy from either a user address, or kernel address,
+// depending on usr_src.
+// Returns 0 on success, -1 on error.
+//
+// comment from me:
+// used for file system
+int either_copyin(void *dst, int user_src, uint64 src, uint64 len) {
+    proc_t *p = myproc();
+    if(user_src){
+        return copyin(p->pgtbl, dst, src, len);
+    } else {
+        memmove(dst, (char*)src, len);
+        return 0;
+    }
+}
+
+// Copy to either a user address, or kernel address,
+// depending on usr_dst.
+// Returns 0 on success, -1 on error.
+int
+either_copyout(int user_dst, uint64 dst, void *src, uint64 len)
+{
+  proc_t *p = myproc();
+  if(user_dst){
+    return copyout(p->pgtbl, dst, src, len);
+  } else {
+    memmove((char *)dst, src, len);
+    return 0;
+  }
 }

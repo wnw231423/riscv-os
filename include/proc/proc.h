@@ -3,6 +3,8 @@
 
 #include "param.h"
 #include "types.h"
+#include "fs/file.h"
+#include "fs/fs.h"
 
 typedef struct context {
     uint64 ra;
@@ -85,8 +87,11 @@ typedef struct proc {
 
     pagetbl_t pgtbl;
     uint64 heap_top;
-    uint64 ustack_pages;
+    //uint64 ustack_pages;
     trapframe_t *trapframe;
+
+    struct file *ofile[NOFILE];  // open files
+    struct inode *cwd;  // current directory
 
     uint64 kstack;
     context_t ctx;

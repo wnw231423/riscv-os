@@ -11,10 +11,10 @@ static struct {
 
 static char digits[] = "0123456789abcdef";
 
-// simplify the consputc.
-static void consputc(char c) {
-    uart_putc_sync(c);
-}
+// // simplify the consputc.
+// static void consputc(char c) {
+//     uartputc_sync(c);
+// }
 
 static void printint(long long xx, int base, int sign) {
     char buf[20];

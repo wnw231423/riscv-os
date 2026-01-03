@@ -5,9 +5,9 @@
 #include "defs.h"
 #include "param.h"
 #include "memlayout.h"
-#include "spinlock.h"
-#include "proc.h"
-#include "sleeplock.h"
+#include "lib/spinlock.h"
+#include "proc/proc.h"
+#include "lib/sleeplock.h"
 
 void
 initsleeplock(struct sleeplock *lk, char *name)

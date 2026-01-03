@@ -1,4 +1,5 @@
 K=kernel
+U=user
 INC=include
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
@@ -65,18 +66,38 @@ $K/kernel: INIT $(OBJS) $K/kernel.ld
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
 	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
 
-# QEMU选项
-CPUNUM = 3
-QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUNUM) -nographic
+ULIB = $U/user_lib.o $U/user_syscall.o
 
-qemu: $K/kernel
+$U/%.o: $U/%.c
+	$(CC) $(CFLAGS) -I $U -c -o $@ $^
+
+$U/_%: $U/%.o $(ULIB) $U/user.ld
+	$(LD) $(LDFLAGS) -T $U/user.ld -o $@ $(filter-out %.ld, $^)
+
+UPROGS = \
+	$U/_test\
+
+mkfs: mkfs.c
+	gcc -I$(INC) -o mkfs mkfs.c
+
+fs.img: mkfs $(UPROGS)
+	./mkfs fs.img $(UPROGS)
+
+# QEMU选项
+CPUNUM = 1
+QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUNUM) -nographic
+QEMUOPTS += -global virtio-mmio.force-legacy=false
+QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
+QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+
+qemu: fs.img $K/kernel 
 	$(QEMU) $(QEMUOPTS)
 
 # 清理规则
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*/*.o */*.d */*.asm */*.sym */*/*.o */*/*.d */*/*.asm */*/*.sym \
-	$K/kernel .gdbinit
+	$K/kernel .gdbinit fs.img mkfs
 
 # 调试相关
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -87,7 +108,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: $K/kernel .gdbinit
+qemu-gdb: fs.img $K/kernel .gdbinit
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 

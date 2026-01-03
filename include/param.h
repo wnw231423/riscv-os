@@ -7,6 +7,8 @@
 // maximum number of processes
 #define NPROC 64
 
+#define USERSTACK    1     // user stack pages
+
 // file system
 #define NOFILE       16  // open files per process
 #define NFILE       100  // open files per system

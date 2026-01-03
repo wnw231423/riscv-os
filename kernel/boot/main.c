@@ -8,7 +8,8 @@ void main() {
     int cpuid = r_tp();
 
     if(cpuid == 0) {
-        uartinit();
+        //uartinit();
+        consoleinit();
         printfinit();
         pmem_init();
         kvminit();
@@ -18,6 +19,10 @@ void main() {
         plic_init();
         plic_init_hart();
         proc_init();
+        binit();
+        iinit();
+        fileinit();
+        virtio_disk_init();
         init_zero();
 
         printf("cpu %d is booting!\n", cpuid);
