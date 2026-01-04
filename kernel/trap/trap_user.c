@@ -38,7 +38,9 @@ uint64 trap_user_handler() {
         // system call
         p->trapframe->epc += 4;
         intr_on();
+        #ifdef SYSCALL_DEBUG
         printf("get a syscall from proc %d\n", myproc()->pid);
+        #endif
         syscall();
     } else if (scause == 0x8000000000000009L) {
         // SEI

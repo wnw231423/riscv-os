@@ -8,6 +8,8 @@
 #include "fs/buf.h"
 #include "fs/file.h"
 
+#define SYSCALL_DEBUG
+
 // uart.c
 void            uartinit(void);
 void            uartintr(void);

@@ -60,8 +60,10 @@ uint64 sys_read(void) {
     int n;
     uint64 p;
 
+    // exchange 1, 2 to fit class test code
     argaddr(2, &p);
     arg_int(1, &n);
+    
     if(argfd(0, 0, &f) < 0) {
         //printf("DEBUG: sys_read failed\n");
         return -1;
@@ -74,8 +76,10 @@ uint64 sys_write(void) {
     int n;
     uint64 p;
     
+    // exchange 1, 2 to fit class test code
     argaddr(2, &p);
     arg_int(1, &n);
+    
     if(argfd(0, 0, &f) < 0) {
         //printf("DEBUG: sys_write failed\n");
         return -1;
@@ -288,7 +292,7 @@ uint64 sys_open(void) {
 
   arg_int(1, &omode);
   if((n = arg_str(0, path, MAXPATH)) < 0) {
-    printf("DEBUG: sys_open failed 1\n");
+    //printf("DEBUG: sys_open failed 1\n");
     return -1;
   }
   //begin_op();
@@ -297,20 +301,20 @@ uint64 sys_open(void) {
     ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
       //end_op();
-      printf("DEBUG: sys_open failed 2\n");
+      //printf("DEBUG: sys_open failed 2\n");
       return -1;
     }
   } else {
     if((ip = namei(path)) == 0){
       //end_op();
-      printf("DEBUG: sys_open failed 3\n");
+      //printf("DEBUG: sys_open failed 3\n");
       return -1;
     }
     ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);
       //end_op();
-      printf("DEBUG: sys_open failed 4\n");
+      //printf("DEBUG: sys_open failed 4\n");
       return -1;
     }
   }
@@ -318,7 +322,7 @@ uint64 sys_open(void) {
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
     iunlockput(ip);
     //end_op();
-    printf("DEBUG: sys_open failed 5\n");
+    //printf("DEBUG: sys_open failed 5\n");
     return -1;
   }
 
@@ -326,7 +330,7 @@ uint64 sys_open(void) {
     if(f)
       fileclose(f);
     iunlockput(ip);
-    printf("DEBUG: sys_open failed 6\n");
+    //printf("DEBUG: sys_open failed 6\n");
     //end_op();
     return -1;
   }
@@ -383,7 +387,7 @@ sys_mknod(void)
     //end_op();
     return -1;
   }
-  printf("%s\n", path);
+  //printf("%s\n", path);
   iunlockput(ip);
   //end_op();
   return 0;

@@ -84,10 +84,10 @@ void trap_kernel_handler() {
 
 void timer_interrupt_handler() {
     if (cpuid() == 0) {
-        uint64 ticks = timer_get_ticks();
-        if (ticks % 10 == 0) {
-            printf("timer tick %ld\n", ticks);
-        }
+        // uint64 ticks = timer_get_ticks();
+        // if (ticks % 10 == 0) {
+        //     printf("timer tick %ld\n", ticks);
+        // }
         timer_update();
     }
 

@@ -86,7 +86,7 @@ int filestat(struct file *f, uint64 addr) {
 }
 
 int fileread(struct file *f, uint64 addr, int n) {
-    printf("DEBUG: fileread type=%d major=%d\n", f->type, f->major);
+    //printf("DEBUG: fileread type=%d major=%d\n", f->type, f->major);
     int r = 0;
 
     if(f->readable == 0)
